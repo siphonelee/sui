@@ -13,7 +13,7 @@ use tracing::{info, warn};
 
 /// The minimum and maximum protocol versions supported by this build.
 const MIN_PROTOCOL_VERSION: u64 = 1;
-const MAX_PROTOCOL_VERSION: u64 = 45;
+const MAX_PROTOCOL_VERSION: u64 = 46;
 
 // Record history of protocol version allocations here:
 //
@@ -122,6 +122,7 @@ const MAX_PROTOCOL_VERSION: u64 = 45;
 // Version 44: Enable consensus fork detection on mainnet.
 //             Switch between Narwhal and Mysticeti consensus in tests, devnet and testnet.
 // Version 45: Use tonic networking for Mysticeti consensus.
+// Version 46: Enable Move enums on devnet.
 
 #[derive(Copy, Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ProtocolVersion(u64);
@@ -2147,6 +2148,11 @@ impl ProtocolConfig {
                         cfg.feature_flags.consensus_network = ConsensusNetwork::Tonic;
                     }
                     // Also bumps framework snapshot to fix binop issue.
+                }
+                46 => {
+                    if chain != Chain::Testnet && chain != Chain::Mainnet {
+                        cfg.move_binary_format_version = Some(7);
+                    }
                 }
                 // Use this template when making changes:
                 //
