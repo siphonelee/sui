@@ -1490,6 +1490,12 @@ impl VersionedProtocolMessage for TransactionData {
             });
         }
 
+        if !protocol_config.random_beacon() && self.uses_randomness() {
+            return Err(SuiError::UnsupportedFeatureError {
+                error: "randomness is not enabled on this network".to_string(),
+            });
+        }
+
         // Now check interior versioned data
         self.kind().check_version_supported(protocol_config)?;
 
@@ -1876,6 +1882,12 @@ impl TransactionData {
             self.gas_data().payment.clone(),
         )
     }
+
+    pub fn uses_randomness(&self) -> bool {
+        self.shared_input_objects()
+            .iter()
+            .any(|obj| obj.id() == SUI_RANDOMNESS_STATE_OBJECT_ID)
+    }
 }
 
 #[enum_dispatch]
@@ -2250,13 +2262,6 @@ impl SenderSignedData {
             .any(|sig| sig.is_upgraded_multisig())
     }
 
-    pub fn uses_randomness(&self) -> bool {
-        self.transaction_data()
-            .shared_input_objects()
-            .iter()
-            .any(|obj| obj.id() == SUI_RANDOMNESS_STATE_OBJECT_ID)
-    }
-
     #[cfg(test)]
     pub fn intent_message_mut_for_testing(&mut self) -> &mut IntentMessage<TransactionData> {
         &mut self.inner_mut().intent_message
@@ -2280,6 +2285,22 @@ impl SenderSignedData {
         })
     }
 
+    fn check_user_signature_protocol_compatibility(&self, config: &ProtocolConfig) -> SuiResult {
+        if !config.zklogin_auth() && self.has_zklogin_sig() {
+            return Err(SuiError::UnsupportedFeatureError {
+                error: "zklogin is not enabled on this network".to_string(),
+            });
+        }
+
+        if !config.supports_upgraded_multisig() && self.has_upgraded_multisig() {
+            return Err(SuiError::UnsupportedFeatureError {
+                error: "upgraded multisig format not enabled on this network".to_string(),
+            });
+        }
+
+        Ok(())
+    }
+
     /// Validate untrusted user transaction, including its size, input count, command count, etc.
     pub fn validity_check(&self, config: &ProtocolConfig, epoch: EpochId) -> SuiResult {
         // SenderSignedData must contain exactly one transaction.
@@ -2292,6 +2313,9 @@ impl SenderSignedData {
                 )
             }
         );
+
+        // Check that the features used by the user signatures are enabled on the network.
+        self.check_user_signature_protocol_compatibility(config)?;
 
         // CRITICAL!!
         // Users cannot send system transactions.

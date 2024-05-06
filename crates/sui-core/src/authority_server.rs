@@ -340,7 +340,7 @@ impl ValidatorService {
         // CRITICAL: DO NOT ADD ANYTHING BEFORE THIS CHECK.
         // This must be the first thing to check before anything else, because the transaction
         // may not even be valid to access for any other checks.
-        Self::transaction_validity_check(&epoch_store, transaction.data())?;
+        transaction.validity_check(epoch_store.protocol_config(), epoch_store.epoch())?;
 
         // When authority is overloaded and decide to reject this tx, we still lock the object
         // and ask the client to retry in the future. This is because without locking, the
@@ -579,7 +579,7 @@ impl ValidatorService {
         // This must be the first thing to check before anything else, because the transaction
         // may not even be valid to access for any other checks.
         // We need to check this first because we haven't verified the cert signature.
-        Self::transaction_validity_check(&epoch_store, certificate.data())?;
+        certificate.validity_check(epoch_store.protocol_config(), epoch_store.epoch())?;
 
         let span = error_span!("submit_certificate", tx_digest = ?certificate.digest());
         let request = HandleCertificateRequestV3 {
@@ -609,7 +609,7 @@ impl ValidatorService {
         // This must be the first thing to check before anything else, because the transaction
         // may not even be valid to access for any other checks.
         // We need to check this first because we haven't verified the cert signature.
-        Self::transaction_validity_check(&epoch_store, certificate.data())?;
+        certificate.validity_check(epoch_store.protocol_config(), epoch_store.epoch())?;
 
         let span = error_span!("handle_certificate", tx_digest = ?certificate.digest());
         let request = HandleCertificateRequestV3 {
@@ -642,7 +642,9 @@ impl ValidatorService {
         // This must be the first thing to check before anything else, because the transaction
         // may not even be valid to access for any other checks.
         // We need to check this first because we haven't verified the cert signature.
-        Self::transaction_validity_check(&epoch_store, request.certificate.data())?;
+        request
+            .certificate
+            .validity_check(epoch_store.protocol_config(), epoch_store.epoch())?;
         let span = error_span!("handle_certificate_v3", tx_digest = ?request.certificate.digest());
 
         self.handle_certificate(request, &epoch_store, true)
@@ -655,37 +657,6 @@ impl ValidatorService {
                     ),
                 )
             })
-    }
-
-    fn transaction_validity_check(
-        epoch_store: &Arc<AuthorityPerEpochStore>,
-        transaction: &SenderSignedData,
-    ) -> SuiResult<()> {
-        let config = epoch_store.protocol_config();
-        // CRITICAL: DO NOT ADD ANYTHING BEFORE THIS CHECK.
-        // This must be the first thing to check because the transaction may not even be valid to
-        // access for any other checks.
-        transaction.validity_check(config, epoch_store.epoch())?;
-
-        if !config.zklogin_auth() && transaction.has_zklogin_sig() {
-            return Err(SuiError::UnsupportedFeatureError {
-                error: "zklogin is not enabled on this network".to_string(),
-            });
-        }
-
-        if !config.supports_upgraded_multisig() && transaction.has_upgraded_multisig() {
-            return Err(SuiError::UnsupportedFeatureError {
-                error: "upgraded multisig format not enabled on this network".to_string(),
-            });
-        }
-
-        if !epoch_store.randomness_state_enabled() && transaction.uses_randomness() {
-            return Err(SuiError::UnsupportedFeatureError {
-                error: "randomness is not enabled on this network".to_string(),
-            });
-        }
-
-        Ok(())
     }
 
     async fn object_info_impl(
