@@ -398,7 +398,7 @@ impl EndOfEpochTransactionKind {
 }
 
 impl VersionedProtocolMessage for TransactionKind {
-    fn check_version_supported(&self, protocol_config: &ProtocolConfig) -> SuiResult {
+    fn check_version_and_features_supported(&self, protocol_config: &ProtocolConfig) -> SuiResult {
         // When adding new cases, they must be guarded by a feature flag and return
         // UnsupportedFeatureError if the flag is not set.
         match &self {
@@ -1469,7 +1469,7 @@ impl VersionedProtocolMessage for TransactionData {
         })
     }
 
-    fn check_version_supported(&self, protocol_config: &ProtocolConfig) -> SuiResult {
+    fn check_version_and_features_supported(&self, protocol_config: &ProtocolConfig) -> SuiResult {
         // First check the gross version
         let (message_version, supported) = match self {
             Self::V1(_) => (1, SupportedProtocolVersions::new_for_message(1, u64::MAX)),
@@ -2353,7 +2353,7 @@ impl SenderSignedData {
         );
 
         tx_data
-            .check_version_supported(config)
+            .check_version_and_features_supported(config)
             .map_err(Into::<SuiError>::into)?;
         tx_data
             .validity_check(config)
@@ -2368,9 +2368,9 @@ impl VersionedProtocolMessage for SenderSignedData {
         self.transaction_data().message_version()
     }
 
-    fn check_version_supported(&self, protocol_config: &ProtocolConfig) -> SuiResult {
+    fn check_version_and_features_supported(&self, protocol_config: &ProtocolConfig) -> SuiResult {
         self.transaction_data()
-            .check_version_supported(protocol_config)?;
+            .check_version_and_features_supported(protocol_config)?;
 
         // This code does nothing right now. Its purpose is to cause a compiler error when a
         // new signature type is added.
@@ -2757,7 +2757,8 @@ pub trait VersionedProtocolMessage {
     }
 
     /// Check that the version of the message is the correct one to use at this protocol version.
-    fn check_version_supported(&self, protocol_config: &ProtocolConfig) -> SuiResult;
+    /// Also checks whether the feauures used by the message are supported by the protocol config.
+    fn check_version_and_features_supported(&self, protocol_config: &ProtocolConfig) -> SuiResult;
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, PartialOrd, Ord)]
