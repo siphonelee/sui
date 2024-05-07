@@ -104,9 +104,9 @@ function WalletConnectionManager({
 	zkSend,
 	children,
 }: WalletConnectionManagerProps) {
+	useZkSendWallet(zkSend);
 	useWalletsChanged(preferredWallets, requiredFeatures);
 	useWalletPropertiesChanged();
-	useZkSendWallet(zkSend);
 	useUnsafeBurnerWallet(enableUnsafeBurner);
 	useAutoConnectWallet();
 
