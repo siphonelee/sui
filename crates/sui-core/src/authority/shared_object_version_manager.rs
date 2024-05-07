@@ -3,7 +3,7 @@
 
 use crate::authority::epoch_start_configuration::EpochStartConfigTrait;
 use crate::authority::AuthorityPerEpochStore;
-use crate::execution_cache::ExecutionCacheRead;
+use crate::execution_cache::ObjectCacheRead;
 use std::collections::HashMap;
 use sui_types::crypto::RandomnessRound;
 use sui_types::effects::{TransactionEffects, TransactionEffectsAPI};
@@ -35,7 +35,7 @@ pub struct ConsensusSharedObjVerAssignment {
 impl SharedObjVerManager {
     pub async fn assign_versions_from_consensus(
         epoch_store: &AuthorityPerEpochStore,
-        cache_reader: &dyn ExecutionCacheRead,
+        cache_reader: &dyn ObjectCacheRead,
         certificates: &[VerifiedExecutableTransaction],
         randomness_round: Option<RandomnessRound>,
     ) -> SuiResult<ConsensusSharedObjVerAssignment> {
@@ -80,7 +80,7 @@ impl SharedObjVerManager {
     pub async fn assign_versions_from_effects(
         certs_and_effects: &[(&VerifiedExecutableTransaction, &TransactionEffects)],
         epoch_store: &AuthorityPerEpochStore,
-        cache_reader: &dyn ExecutionCacheRead,
+        cache_reader: &dyn ObjectCacheRead,
     ) -> SuiResult<AssignedTxAndVersions> {
         // We don't care about the results since we can use effects to assign versions.
         // But we must call it to make sure whenever a shared object is touched the first time
@@ -118,7 +118,7 @@ impl SharedObjVerManager {
 async fn get_or_init_versions(
     transactions: impl Iterator<Item = &SenderSignedData>,
     epoch_store: &AuthorityPerEpochStore,
-    cache_reader: &dyn ExecutionCacheRead,
+    cache_reader: &dyn ObjectCacheRead,
     generate_randomness: bool,
 ) -> SuiResult<HashMap<ObjectID, SequenceNumber>> {
     let mut shared_input_objects: Vec<_> = transactions
@@ -251,7 +251,7 @@ mod tests {
             assigned_versions,
         } = SharedObjVerManager::assign_versions_from_consensus(
             &epoch_store,
-            authority.get_cache_reader().as_ref(),
+            authority.get_object_cache_reader().as_ref(),
             &certs,
             None,
         )
@@ -311,7 +311,7 @@ mod tests {
             assigned_versions,
         } = SharedObjVerManager::assign_versions_from_consensus(
             &epoch_store,
-            authority.get_cache_reader().as_ref(),
+            authority.get_object_cache_reader().as_ref(),
             &certs,
             Some(RandomnessRound::new(1)),
         )
@@ -392,7 +392,7 @@ mod tests {
                 .collect::<Vec<_>>()
                 .as_slice(),
             &epoch_store,
-            authority.get_cache_reader().as_ref(),
+            authority.get_object_cache_reader().as_ref(),
         )
         .await
         .unwrap();
