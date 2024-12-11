@@ -111,7 +111,7 @@ pub const SUI_LOCAL_NETWORK_URL: &str = "http://127.0.0.1:9000";
 pub const SUI_LOCAL_NETWORK_URL_0: &str = "http://0.0.0.0:9000";
 pub const SUI_LOCAL_NETWORK_GAS_URL: &str = "http://127.0.0.1:5003/gas";
 pub const SUI_DEVNET_URL: &str = "https://fullnode.devnet.sui.io:443";
-pub const SUI_TESTNET_URL: &str = "https://fullnode.testnet.sui.io:443";
+pub const SUI_TESTNET_URL: &str = "https://sui-testnet.public.blastapi.io:443";
 
 /// A Sui client builder for connecting to the Sui network
 ///
